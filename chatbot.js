@@ -1,5 +1,5 @@
 // Replace this with your actual Netlify site URL after deployment
-const PROXY_URL = 'https://YOUR-NETLIFY-SITE-NAME.netlify.app/.netlify/functions/chat-proxy';
+const PROXY_URL = 'https://capable-brioche-99db20.netlify.app/.netlify/functions/chat-proxy';
 
 // Main chatbot class
 class Chatbot {
