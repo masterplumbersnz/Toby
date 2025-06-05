@@ -3,7 +3,9 @@ const fetch = require('node-fetch');
 const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
 
 exports.handler = async (event) => {
-  // Handle preflight (CORS OPTIONS) request
+  console.log('Incoming Event:', JSON.stringify(event, null, 2));
+
+  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -12,12 +14,28 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       },
-      body: '', // Required to satisfy some CORS checks
+      body: '',
     };
   }
 
   try {
-    const { message, thread_id } = JSON.parse(event.body || '{}');
+    // Validate and parse incoming JSON
+    let message, thread_id;
+    try {
+      const parsed = JSON.parse(event.body || '{}');
+      message = parsed.message;
+      thread_id = parsed.thread_id;
+    } catch (e) {
+      console.error('Invalid JSON in request:', e);
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ error: 'Invalid JSON in request body.' }),
+      };
+    }
 
     if (!message) {
       return {
@@ -30,9 +48,25 @@ exports.handler = async (event) => {
       };
     }
 
+    // Get env vars
     const assistantId = process.env.OPENAI_ASSISTANT_ID;
     const apiKey = process.env.OPENAI_API_KEY;
 
+    if (!apiKey || !assistantId) {
+      console.error('Missing environment variables');
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          error: 'Server misconfiguration: Missing API key or Assistant ID',
+        }),
+      };
+    }
+
+    // Create thread if needed
     const threadRes = thread_id
       ? { id: thread_id }
       : await fetch('https://api.openai.com/v1/threads', {
@@ -45,7 +79,9 @@ exports.handler = async (event) => {
         }).then((res) => res.json());
 
     const threadId = threadRes.id;
+    console.log('Using thread ID:', threadId);
 
+    // Post user message
     await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       method: 'POST',
       headers: {
@@ -56,7 +92,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({ role: 'user', content: message }),
     });
 
-    const run = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
+    // Run the assistant
+    const runRes = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -66,8 +103,10 @@ exports.handler = async (event) => {
       body: JSON.stringify({ assistant_id: assistantId }),
     }).then((res) => res.json());
 
-    const runId = run.id;
+    const runId = runRes.id;
+    console.log('Run started:', runId);
 
+    // Poll until complete
     let runStatus = 'in_progress';
     while (runStatus === 'in_progress' || runStatus === 'queued') {
       await new Promise((r) => setTimeout(r, 1500));
@@ -84,7 +123,8 @@ exports.handler = async (event) => {
       runStatus = statusRes.status;
     }
 
-    const messages = await fetch(
+    // Get messages
+    const messagesRes = await fetch(
       `https://api.openai.com/v1/threads/${threadId}/messages`,
       {
         headers: {
@@ -94,9 +134,13 @@ exports.handler = async (event) => {
       }
     ).then((res) => res.json());
 
-    const lastMessage = messages.data
+    const lastMessage = messagesRes.data
       .filter((msg) => msg.role === 'assistant')
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      .sort((a, b) => b.created_at - a.created_at)[0];
+
+    const reply = lastMessage?.content?.[0]?.text?.value || '(No reply)';
+
+    console.log('Reply:', reply);
 
     return {
       statusCode: 200,
@@ -104,20 +148,17 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        reply: lastMessage?.content?.[0]?.text?.value || '(No response)',
-        thread_id: threadId,
-      }),
+      body: JSON.stringify({ reply, thread_id: threadId }),
     };
   } catch (error) {
-    console.error('Chat Proxy Error:', error);
+    console.error('Unhandled Error in chat-proxy.js:', error);
     return {
       statusCode: 500,
       headers: {
         'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ error: 'Internal Server Error' }),
+      body: JSON.stringify({ error: 'Internal server error' }),
     };
   }
 };
