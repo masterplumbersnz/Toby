@@ -11,7 +11,7 @@ exports.handler = async function(event) {
 
   try {
     const { message } = JSON.parse(event.body);
-    const ASSISTANT_ID = 'asst_MnnHvPD6qJufOkfO8NyDjNv3'; // Replace with your actual Assistant ID
+    const ASSISTANT_ID = 'OPENAI_ASSISTANT_ID'; // Replace with your actual Assistant ID
 
     // Step 1: Create a thread
     const threadRes = await fetch('https://api.openai.com/v1/threads', {
