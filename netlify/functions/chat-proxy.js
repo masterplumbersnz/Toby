@@ -1,17 +1,18 @@
-// chat-proxy.js - Netlify Function
 const fetch = require('node-fetch');
 
+const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
+
 exports.handler = async (event) => {
-  // Handle CORS preflight requests
+  // Handle preflight (CORS OPTIONS) request
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       },
-      body: '',
+      body: '', // Required to satisfy some CORS checks
     };
   }
 
@@ -21,6 +22,10 @@ exports.handler = async (event) => {
     if (!message) {
       return {
         statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ error: 'Missing message in request body.' }),
       };
     }
@@ -28,7 +33,6 @@ exports.handler = async (event) => {
     const assistantId = process.env.OPENAI_ASSISTANT_ID;
     const apiKey = process.env.OPENAI_API_KEY;
 
-    // Start a thread if no thread ID provided
     const threadRes = thread_id
       ? { id: thread_id }
       : await fetch('https://api.openai.com/v1/threads', {
@@ -42,7 +46,6 @@ exports.handler = async (event) => {
 
     const threadId = threadRes.id;
 
-    // Send user message to thread
     await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       method: 'POST',
       headers: {
@@ -53,7 +56,6 @@ exports.handler = async (event) => {
       body: JSON.stringify({ role: 'user', content: message }),
     });
 
-    // Run the assistant
     const run = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
       method: 'POST',
       headers: {
@@ -66,7 +68,6 @@ exports.handler = async (event) => {
 
     const runId = run.id;
 
-    // Poll until complete
     let runStatus = 'in_progress';
     while (runStatus === 'in_progress' || runStatus === 'queued') {
       await new Promise((r) => setTimeout(r, 1500));
@@ -83,7 +84,6 @@ exports.handler = async (event) => {
       runStatus = statusRes.status;
     }
 
-    // Get latest messages
     const messages = await fetch(
       `https://api.openai.com/v1/threads/${threadId}/messages`,
       {
@@ -101,7 +101,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -114,7 +114,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ error: 'Internal Server Error' }),
