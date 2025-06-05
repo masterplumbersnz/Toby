@@ -1,92 +1,123 @@
 const fetch = require('node-fetch');
 
-exports.handler = async function(event) {
+const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
+
+exports.handler = async (event) => {
+  // Handle preflight (CORS OPTIONS) request
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: corsHeaders(),
-      body: '',
+      headers: {
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      },
+      body: '', // Required to satisfy some CORS checks
     };
   }
 
   try {
-    const { message } = JSON.parse(event.body);
-    const ASSISTANT_ID = 'asst_MnnHvPD6qJufOkfO8NyDjNv3'; // Replace with your actual Assistant ID
+    const { message, thread_id } = JSON.parse(event.body || '{}');
 
-    // Step 1: Create a thread
-    const threadRes = await fetch('https://api.openai.com/v1/threads', {
+    if (!message) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ error: 'Missing message in request body.' }),
+      };
+    }
+
+    const assistantId = process.env.OPENAI_ASSISTANT_ID;
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    const threadRes = thread_id
+      ? { id: thread_id }
+      : await fetch('https://api.openai.com/v1/threads', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'OpenAI-Beta': 'assistants=v2',
+            'Content-Type': 'application/json',
+          },
+        }).then((res) => res.json());
+
+    const threadId = threadRes.id;
+
+    await fetch(`https://api.openai.com/v1/threads/${threadId}/messages`, {
       method: 'POST',
-      headers: openaiHeaders(),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'OpenAI-Beta': 'assistants=v2',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'user', content: message }),
     });
 
-    const thread = await threadRes.json();
-
-    // Step 2: Add user message to the thread
-    await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
+    const run = await fetch(`https://api.openai.com/v1/threads/${threadId}/runs`, {
       method: 'POST',
-      headers: openaiHeaders(),
-      body: JSON.stringify({
-        role: 'user',
-        content: message,
-      }),
-    });
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'OpenAI-Beta': 'assistants=v2',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ assistant_id: assistantId }),
+    }).then((res) => res.json());
 
-    // Step 3: Run the assistant
-    const runRes = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs`, {
-      method: 'POST',
-      headers: openaiHeaders(),
-      body: JSON.stringify({
-        assistant_id: ASSISTANT_ID,
-      }),
-    });
+    const runId = run.id;
 
-    const run = await runRes.json();
+    let runStatus = 'in_progress';
+    while (runStatus === 'in_progress' || runStatus === 'queued') {
+      await new Promise((r) => setTimeout(r, 1500));
+      const statusRes = await fetch(
+        `https://api.openai.com/v1/threads/${threadId}/runs/${runId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'OpenAI-Beta': 'assistants=v2',
+          },
+        }
+      ).then((res) => res.json());
 
-    // Step 4: Poll until run completes
-    let runStatus;
-    do {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1s delay
-      const statusRes = await fetch(`https://api.openai.com/v1/threads/${thread.id}/runs/${run.id}`, {
-        headers: openaiHeaders(),
-      });
-      runStatus = await statusRes.json();
-    } while (runStatus.status !== 'completed');
+      runStatus = statusRes.status;
+    }
 
-    // Step 5: Get messages
-    const messagesRes = await fetch(`https://api.openai.com/v1/threads/${thread.id}/messages`, {
-      headers: openaiHeaders(),
-    });
+    const messages = await fetch(
+      `https://api.openai.com/v1/threads/${threadId}/messages`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'OpenAI-Beta': 'assistants=v2',
+        },
+      }
+    ).then((res) => res.json());
 
-    const messagesData = await messagesRes.json();
-    const assistantMessage = messagesData.data.find(msg => msg.role === 'assistant')?.content?.[0]?.text?.value;
+    const lastMessage = messages.data
+      .filter((msg) => msg.role === 'assistant')
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
 
     return {
       statusCode: 200,
-      headers: corsHeaders(),
-      body: JSON.stringify({ reply: assistantMessage || 'No reply.' }),
+      headers: {
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reply: lastMessage?.content?.[0]?.text?.value || '(No response)',
+        thread_id: threadId,
+      }),
     };
-
   } catch (error) {
+    console.error('Chat Proxy Error:', error);
     return {
       statusCode: 500,
-      headers: corsHeaders(),
-      body: JSON.stringify({ error: error.message }),
+      headers: {
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ error: 'Internal Server Error' }),
     };
   }
 };
-
-function openaiHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-    'OpenAI-Beta': 'assistants=v2'
-  };
-}
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-}
