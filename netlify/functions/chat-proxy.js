@@ -21,7 +21,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': 'https://liveweave.com',
+        'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
@@ -31,7 +31,7 @@ exports.handler = async function(event, context) {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': 'https://liveweave.com',
+        'Access-Control-Allow-Origin': 'https://masterplumbers.org.nz',
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
       },
