@@ -4,18 +4,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   let thread_id = null;
 
+  // Format markdown-style responses (bold, line breaks, numbered lists)
   const formatMarkdown = (text) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
       .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>') // numbered list
       .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
-      .replace(/\n/g, '<br>'); // single line breaks
+      .replace(/\n/g, '<br>'); // line breaks
+  };
+
+  // Convert OpenAI citation format to readable source labels
+  const formatCitations = (text) => {
+    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, sourceName) => {
+      return `<em>[Source: ${sourceName}]</em>`;
+    });
   };
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
     div.className = `bubble ${sender}`;
-    div.innerHTML = sender === 'bot' ? formatMarkdown(content) : content;
+    div.innerHTML = sender === 'bot'
+      ? formatCitations(formatMarkdown(content))
+      : content;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;
