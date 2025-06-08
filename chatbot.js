@@ -4,11 +4,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   let thread_id = null;
 
-  const appendMessage = (text, sender) => {
+  const createBubble = (content, sender) => {
     const div = document.createElement('div');
     div.className = `bubble ${sender}`;
-    div.textContent = text;
+    div.innerHTML = content;
     messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return div;
+  };
+
+  const showSpinner = () => {
+    return createBubble('<span class="spinner"></span>', 'bot');
   };
 
   form.addEventListener('submit', async (e) => {
@@ -16,9 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const message = input.value.trim();
     if (!message) return;
 
-    appendMessage(message, 'user');
+    createBubble(message, 'user');
     input.value = '';
-    appendMessage('Thinking...', 'bot');
+    const thinkingBubble = showSpinner();
 
     try {
       const startRes = await fetch('https://capable-brioche-99db20.netlify.app/.netlify/functions/start-run', {
@@ -26,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, thread_id }),
       });
+
       const { thread_id: newThreadId, run_id } = await startRes.json();
       thread_id = newThreadId;
 
@@ -41,19 +48,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (checkRes.status === 202) {
           await new Promise(r => setTimeout(r, 1000));
-        } else {
+        } else if (checkRes.ok) {
           const data = await checkRes.json();
           reply = data.reply || '(No response)';
           completed = true;
+        } else {
+          throw new Error('Check-run failed with status: ' + checkRes.status);
         }
       }
 
-      const thinking = messages.querySelector('.bot:last-child');
-      if (thinking) thinking.remove();
-      appendMessage(reply, 'bot');
+      thinkingBubble.remove();
+      createBubble(reply, 'bot');
     } catch (err) {
       console.error('Chat error:', err);
-      appendMessage('Something went wrong. Try again later.', 'bot');
+      thinkingBubble.remove();
+      createBubble('⚠️ Something went wrong. Please try again later.', 'bot');
     }
   });
 });
