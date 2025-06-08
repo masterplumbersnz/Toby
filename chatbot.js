@@ -4,10 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   let thread_id = null;
 
+  const formatMarkdown = (text) => {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>') // numbered list
+      .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
+      .replace(/\n/g, '<br>'); // single line breaks
+  };
+
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
     div.className = `bubble ${sender}`;
-    div.innerHTML = content;
+    div.innerHTML = sender === 'bot' ? formatMarkdown(content) : content;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;
