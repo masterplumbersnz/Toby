@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-
 const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
 
 exports.handler = async (event) => {
@@ -23,25 +22,32 @@ exports.handler = async (event) => {
     if (!message || !apiKey || !assistantId) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-        },
-        body: JSON.stringify({ error: 'Missing data or env vars.' }),
+        headers: { 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
+        body: JSON.stringify({ error: 'Missing message, assistant ID, or API key.' }),
       };
     }
 
-    const threadRes = thread_id
-      ? { id: thread_id }
-      : await fetch('https://api.openai.com/v1/threads', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'OpenAI-Beta': 'assistants=v2',
-            'Content-Type': 'application/json',
-          },
-        }).then((res) => res.json());
+    let threadRes = { id: thread_id };
 
-    await fetch(`https://api.openai.com/v1/threads/${threadRes.id}/messages`, {
+    if (!thread_id) {
+      const createThreadRes = await fetch('https://api.openai.com/v1/threads', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'OpenAI-Beta': 'assistants=v2',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!createThreadRes.ok) {
+        const text = await createThreadRes.text();
+        throw new Error(`Thread creation failed: ${text}`);
+      }
+
+      threadRes = await createThreadRes.json();
+    }
+
+    const msgPostRes = await fetch(`https://api.openai.com/v1/threads/${threadRes.id}/messages`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -51,7 +57,12 @@ exports.handler = async (event) => {
       body: JSON.stringify({ role: 'user', content: message }),
     });
 
-    const runRes = await fetch(`https://api.openai.com/v1/threads/${threadRes.id}/runs`, {
+    if (!msgPostRes.ok) {
+      const text = await msgPostRes.text();
+      throw new Error(`Message post failed: ${text}`);
+    }
+
+    const runPostRes = await fetch(`https://api.openai.com/v1/threads/${threadRes.id}/runs`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -59,7 +70,14 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ assistant_id: assistantId }),
-    }).then((res) => res.json());
+    });
+
+    if (!runPostRes.ok) {
+      const text = await runPostRes.text();
+      throw new Error(`Run creation failed: ${text}`);
+    }
+
+    const runRes = await runPostRes.json();
 
     return {
       statusCode: 200,
@@ -73,10 +91,8 @@ exports.handler = async (event) => {
     console.error('start-run error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-      },
-      body: JSON.stringify({ error: 'Internal server error' }),
+      headers: { 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
+      body: JSON.stringify({ error: error.message || 'Internal server error' }),
     };
   }
 };
