@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const showSpinner = () => {
-    return createBubble('<span class="spinner"></span>', 'bot');
+    return createBubble('<span class="spinner"></span> Toby is thinking...', 'bot');
   };
 
   form.addEventListener('submit', async (e) => {
