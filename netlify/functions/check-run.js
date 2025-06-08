@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-
 const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
 
 exports.handler = async (event) => {
@@ -22,48 +21,49 @@ exports.handler = async (event) => {
     if (!thread_id || !run_id || !apiKey) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-        },
-        body: JSON.stringify({ error: 'Missing IDs or API key' }),
+        headers: { 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
+        body: JSON.stringify({ error: 'Missing thread_id, run_id, or API key.' }),
       };
     }
 
-    // Check run status
-    const runStatus = await fetch(
-      `https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'OpenAI-Beta': 'assistants=v2',
-        },
-      }
-    ).then((res) => res.json());
+    const runRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/runs/${run_id}`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'OpenAI-Beta': 'assistants=v2',
+      },
+    });
+
+    if (!runRes.ok) {
+      const text = await runRes.text();
+      throw new Error(`Run status fetch failed: ${text}`);
+    }
+
+    const runStatus = await runRes.json();
 
     if (runStatus.status !== 'completed') {
       return {
         statusCode: 202,
-        headers: {
-          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-        },
+        headers: { 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
         body: JSON.stringify({ status: runStatus.status }),
       };
     }
 
-    // Get reply
-    const messages = await fetch(
-      `https://api.openai.com/v1/threads/${thread_id}/messages`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'OpenAI-Beta': 'assistants=v2',
-        },
-      }
-    ).then((res) => res.json());
+    const msgRes = await fetch(`https://api.openai.com/v1/threads/${thread_id}/messages`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'OpenAI-Beta': 'assistants=v2',
+      },
+    });
 
+    if (!msgRes.ok) {
+      const text = await msgRes.text();
+      throw new Error(`Message fetch failed: ${text}`);
+    }
+
+    const messages = await msgRes.json();
     const lastMessage = messages.data
-      .filter((msg) => msg.role === 'assistant')
-      .sort((a, b) => b.created_at - a.created_at)[0];
+      .filter((m) => m.role === 'assistant')
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
 
     return {
       statusCode: 200,
@@ -80,10 +80,9 @@ exports.handler = async (event) => {
     console.error('check-run error:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-      },
-      body: JSON.stringify({ error: 'Internal server error' }),
+      headers: { 'Access-Control-Allow-Origin': ALLOWED_ORIGIN },
+      body: JSON.stringify({ error: error.message || 'Internal server error' }),
     };
   }
 };
+
