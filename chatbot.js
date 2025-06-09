@@ -22,11 +22,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
-    div.className = `bubble ${sender}`;
-    div.innerHTML = sender === 'bot'
-      ? formatCitations(formatMarkdown(content))
-      : content;
-    messages.appendChild(div);
+    if (sender === 'bot') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'bot-message';
+
+      const avatar = document.createElement('img');
+      avatar.src = 'https://capable-brioche-99db20.netlify.app/toby-avatar.png';
+      avatar.alt = 'Toby';
+      avatar.className = 'avatar';
+
+      div.className = 'bubble bot';
+      div.innerHTML = formatCitations(formatMarkdown(content));
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(div);
+      messages.appendChild(wrapper);
+    } else {
+      div.className = 'bubble user';
+      div.innerHTML = content;
+      messages.appendChild(div);
+    }
+
     messages.scrollTop = messages.scrollHeight;
     return div;
   };
