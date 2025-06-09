@@ -1,6 +1,15 @@
 const fetch = require('node-fetch');
 const ALLOWED_ORIGIN = 'https://masterplumbers.org.nz';
 
+// 🛠️ Helper: Fix broken citations before sending to frontend
+function repairCitations(text) {
+  return text
+    .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
+    .replace(/\[Source:\s*(.*?)】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
+    .replace(/\[Source:\s*(.*?)】/g, '')
+    .replace(/】【(\d+):(\d+)]/g, '');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -65,6 +74,9 @@ exports.handler = async (event) => {
       .filter((m) => m.role === 'assistant')
       .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
 
+    const rawReply = lastMessage?.content?.[0]?.text?.value || '(No reply)';
+    const fixedReply = repairCitations(rawReply); // ✅ Fix citations here
+
     return {
       statusCode: 200,
       headers: {
@@ -72,7 +84,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        reply: lastMessage?.content?.[0]?.text?.value || '(No reply)',
+        reply: fixedReply,
         thread_id,
       }),
     };
@@ -85,4 +97,3 @@ exports.handler = async (event) => {
     };
   }
 };
-
