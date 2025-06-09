@@ -15,10 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Convert OpenAI citation format to readable source labels
   const formatCitations = (text) => {
-    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, sourceName) => {
-      return `<em>[Source: ${sourceName}]</em>`;
+    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
+      const safeSource = rawSourceName
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/[*_]/g, ""); // remove markdown characters if present
+
+      return `<em>[Source: ${safeSource}]</em>`;
     });
   };
+
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
