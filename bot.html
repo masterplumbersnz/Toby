@@ -17,8 +17,8 @@
 
     h2 {
       margin-bottom: 1.5rem;
-      font-weight: strong;
-      color: #00395d; /* Updated title color */
+      font-weight: bold;
+      color: #00395d;
     }
 
     #chatbot-section {
@@ -60,14 +60,28 @@
       align-self: flex-start;
       text-align: left;
     }
+    .bot-message {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .bot-message .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
     form.chat-form {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.75rem;
     }
 
     form.chat-form input {
-      flex: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       padding: 0.6rem 1rem;
       font-size: 16px;
       border: 1px solid #ccc;
@@ -75,6 +89,7 @@
     }
 
     form.chat-form button {
+      flex: 0 0 auto;
       padding: 0.6rem 1.2rem;
       font-size: 16px;
       font-weight: bold;
@@ -83,6 +98,16 @@
       color: white;
       border-radius: 5px;
       cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      form.chat-form {
+        flex-direction: column;
+      }
+
+      form.chat-form button {
+        width: 100%;
+      }
     }
 
     .spinner {
@@ -94,25 +119,24 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
-    
+
     .bot p {
       margin: 0.5em 0;
     }
-    
+
     .bot strong {
-    font-weight: bold;
+      font-weight: bold;
     }
-    
+
     .bot em {
-    color: #000000;
-    font-style: italic;
-    font-size: 0.95em;
+      color: #000000;
+      font-style: italic;
+      font-size: 0.95em;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
   </style>
 </head>
 <body>
