@@ -13,17 +13,26 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\n/g, '<br>'); // line breaks
   };
 
-  // Convert proper OpenAI citation format to readable source labels
+  // Convert valid OpenAI citation format to readable source labels
   const formatCitations = (text) => {
     return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, sourceName) => {
       return `<em>[Source: ${sourceName}]</em>`;
     });
   };
 
+  // FINAL inline citation repair (fixes [Source: name】【#:#] formatting)
+  const repairInlineCitations = (text) => {
+    return text
+      .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
+      .replace(/\[Source:\s*(.*?)】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】');
+  };
+
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
 
-    const formatted = formatMarkdown(formatCitations(content));
+    // Clean up and format final text
+    const repaired = repairInlineCitations(content);
+    const formatted = formatMarkdown(formatCitations(repaired));
 
     if (sender === 'bot') {
       const wrapper = document.createElement('div');
