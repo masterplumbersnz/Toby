@@ -4,23 +4,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   let thread_id = null;
 
-  // Format markdown-style responses (bold, line breaks, numbered lists)
+  // Make textarea auto-expand
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = input.scrollHeight + 'px';
+  });
+
   const formatMarkdown = (text) => {
     return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>') // numbered list
-      .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
-      .replace(/\n/g, '<br>'); // line breaks
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>')
+      .replace(/\n{2,}/g, '<br><br>')
+      .replace(/\n/g, '<br>');
   };
 
-  // ✅ Dual-mode citation renderer: structured + manual
   const formatCitations = (text) => {
-    // Format OpenAI-style structured citations
     let formatted = text.replace(/【\d+:\d+†([^†]+)†?(.*?)?】/g, (_, sourceName) => {
       return `<em>[Source: ${sourceName}]</em>`;
     });
 
-    // Format manually written [Source: XYZ] citations
     formatted = formatted.replace(/\[Source:\s*(.*?)\]/g, (_, sourceName) => {
       return `<em>[Source: ${sourceName}]</em>`;
     });
@@ -28,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return formatted;
   };
 
-  // Catch malformed inlines like [Source: XYZ】【3:5] and repair them
   const repairInlineCitations = (text) => {
     return text
       .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
@@ -77,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     createBubble(message, 'user');
     input.value = '';
+    input.style.height = 'auto'; // Reset height after sending
     const thinkingBubble = showSpinner();
 
     try {
