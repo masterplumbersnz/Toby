@@ -8,30 +8,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatMarkdown = (text) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>') // numbered list
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<strong>$1.</strong> $2') // numbered list without <p>
       .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
       .replace(/\n/g, '<br>'); // line breaks
   };
 
-  // Convert OpenAI citation format to readable source labels
+  // Convert OpenAI citation format to readable source labels, clean up others
   const formatCitations = (text) => {
-    // Convert valid citations
+    // Convert valid OpenAI citations to readable format
     text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
       const safeSource = rawSourceName
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/[*_]/g, ""); // strip markdown symbols
+        .replace(/[<>&"'`]/g, '')   // strip unsafe HTML chars
+        .replace(/[*_]/g, '')       // strip markdown
+        .trim();
       return `<span class="citation">[Source: ${safeSource}]</span>`;
     });
 
-    // Suppress malformed citation fragments
-    text = text.replace(/【\d+:\d+[^】\]]*】/g, '');   // handles 【4:19】 and similar
-    text = text.replace(/【\d+:\d+[^】\]]*\]/g, '');   // handles 【4:19] leftovers
-    text = text.replace(/\[\d+:\d+\]/g, '');          // handles [4:19] and similar
+    // Suppress malformed or leftover citations
+    text = text.replace(/【\d+:\d+[^】\]]*】/g, ''); // 【4:19】
+    text = text.replace(/【\d+:\d+[^】\]]*\]/g, ''); // 【4:19]
+    text = text.replace(/\[\d+:\d+\]/g, '');        // [4:19]
+
+    // Remove raw untagged HTML (e.g. </p><br>)
+    text = text.replace(/<\/?[^>]+(>|$)/g, '');
 
     return text;
   };
-
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
