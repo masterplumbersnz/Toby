@@ -4,39 +4,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   let thread_id = null;
 
-  // Format markdown-style responses (bold, line breaks, numbered lists)
+  // Format markdown-style responses (bold, lists, line breaks)
   const formatMarkdown = (text) => {
     return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<strong>$1.</strong> $2') // numbered list without <p>
-      .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
-      .replace(/\n/g, '<br>'); // line breaks
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')                            // bold
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<br><strong>$1.</strong> $2')               // numbered list with spacing
+      .replace(/\n{2,}/g, '<br><br>')                                             // paragraph breaks
+      .replace(/\n/g, '<br>');                                                    // single line breaks
   };
 
-  // Convert OpenAI citation format to readable source labels, clean up others
+  // Convert OpenAI-style citations into clean, readable source tags
   const formatCitations = (text) => {
-    // Convert valid OpenAI citations to readable format
     text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
       const safeSource = rawSourceName
-        .replace(/[<>&"'`]/g, '')   // strip unsafe HTML chars
-        .replace(/[*_]/g, '')       // strip markdown
+        .replace(/[<>&"'`]/g, '') // strip HTML-sensitive chars
+        .replace(/[*_]/g, '')     // strip markdown
         .trim();
       return `<span class="citation">[Source: ${safeSource}]</span>`;
     });
 
-    // Suppress malformed or leftover citations
-    text = text.replace(/【\d+:\d+[^】\]]*】/g, ''); // 【4:19】
-    text = text.replace(/【\d+:\d+[^】\]]*\]/g, ''); // 【4:19]
-    text = text.replace(/\[\d+:\d+\]/g, '');        // [4:19]
-
-    // Remove raw untagged HTML (e.g. </p><br>)
-    text = text.replace(/<\/?[^>]+(>|$)/g, '');
+    // Suppress malformed or partial citation fragments
+    text = text.replace(/【\d+:\d+[^】\]]*】/g, '');
+    text = text.replace(/【\d+:\d+[^】\]]*\]/g, '');
+    text = text.replace(/\[\d+:\d+\]/g, '');
 
     return text;
   };
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
+
     if (sender === 'bot') {
       const wrapper = document.createElement('div');
       wrapper.className = 'bot-message';
@@ -115,3 +112,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
