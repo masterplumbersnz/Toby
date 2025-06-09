@@ -20,20 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // Clean malformed citation leftovers
-  const cleanMalformedCitations = (text) => {
+  // Repair malformed citations like "[Source: source】【4:1]" → "【4:1†source†lines】"
+  const repairBrokenCitations = (text) => {
     return text
-      .replace(/\[Source:.*?】【\d+:\d+.*?\]/g, '') // `[Source: X】【Y:Z]`
-      .replace(/\[Source:.*?】/g, '')               // `[Source: X】`
-      .replace(/】【\d+:\d+.*?\]/g, '');            // `】【Y:Z]`
+      .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
+      .replace(/\[Source:\s*(.*?)】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
+      .replace(/\[Source:\s*(.*?)】/g, '')         // cleanup leftovers
+      .replace(/】【(\d+):(\d+)]/g, '');           // cleanup unmatched trailing bracket pairs
   };
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
 
-    // Clean and format bot output
-    const cleaned = cleanMalformedCitations(content);
-    const formatted = formatMarkdown(formatCitations(cleaned));
+    // Fix and format bot output
+    const repaired = repairBrokenCitations(content);
+    const formatted = formatMarkdown(formatCitations(repaired));
 
     if (sender === 'bot') {
       const wrapper = document.createElement('div');
