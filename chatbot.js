@@ -13,14 +13,22 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\n/g, '<br>'); // line breaks
   };
 
-  // ✅ Updated citation parser: works for both 2-part and 3-part citations
+  // ✅ Dual-mode citation renderer: structured + manual
   const formatCitations = (text) => {
-    return text.replace(/【\d+:\d+†([^†]+)†?(.*?)?】/g, (_, sourceName) => {
+    // Format OpenAI-style structured citations
+    let formatted = text.replace(/【\d+:\d+†([^†]+)†?(.*?)?】/g, (_, sourceName) => {
       return `<em>[Source: ${sourceName}]</em>`;
     });
+
+    // Format manually written [Source: XYZ] citations
+    formatted = formatted.replace(/\[Source:\s*(.*?)\]/g, (_, sourceName) => {
+      return `<em>[Source: ${sourceName}]</em>`;
+    });
+
+    return formatted;
   };
 
-  // Fix malformed [Source: xyz】【x:y] just in case — fallback protection
+  // Catch malformed inlines like [Source: XYZ】【3:5] and repair them
   const repairInlineCitations = (text) => {
     return text
       .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
