@@ -15,16 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Convert OpenAI citation format to readable source labels
   const formatCitations = (text) => {
-    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
+  // Replace valid OpenAI-style citations with a readable source label
+    text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
       const safeSource = rawSourceName
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/[*_]/g, ""); // remove markdown characters if present
-
-      return `<em>[Source: ${safeSource}]</em>`;
+        .replace(/[*_]/g, ""); // strip markdown characters
+      return `<span class="citation">[Source: ${safeSource}]</span>`;
     });
-  };
 
+  // Suppress malformed or leftover markers like 【4:19】, 【4:19], or [4:19]
+    text = text.replace(/【\d+:\d+[^】]*】/g, ''); // removes full-width brackets
+    text = text.replace(/\[\d+:\d+\]/g, '');      // removes square-bracketed forms
+
+    return text;
+  };
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
