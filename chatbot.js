@@ -7,38 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Format markdown-style responses (bold, line breaks, numbered lists)
   const formatMarkdown = (text) => {
     return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')                            // bold
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<br><strong>$1.</strong> $2')               // numbered list
-      .replace(/brbr/gi, '<br><br>')                                              // model-generated line break fix
-      .replace(/\n{2,}/g, '<br><br>')                                             // paragraph breaks
-      .replace(/\n/g, '<br>');                                                    // single line breaks
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<p><strong>$1.</strong> $2</p>') // numbered list
+      .replace(/\n{2,}/g, '<br><br>') // paragraph breaks
+      .replace(/\n/g, '<br>'); // line breaks
   };
 
-  // Convert OpenAI-style citations and suppress malformed ones
+  // Convert OpenAI citation format to readable source labels
   const formatCitations = (text) => {
-    // Replace valid citation blocks
-    text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
-      const safeSource = rawSourceName
-        .replace(/[<>&"'`]/g, '') // remove HTML-sensitive chars
-        .replace(/[*_]/g, '')     // strip markdown
-        .trim();
-
-      if (safeSource.toLowerCase() === 'source') return ''; // suppress generic [Source: source]
-      return `<span class="citation">[Source: ${safeSource}]</span>`;
+    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, sourceName) => {
+      return `<em>[Source: ${sourceName}]</em>`;
     });
-
-    // Remove malformed or partial citation fragments
-    text = text.replace(/\[Source: source】?/gi, '');
-    text = text.replace(/【\d+:\d+[^】\]]*】/g, '');
-    text = text.replace(/【\d+:\d+[^】\]]*\]/g, '');
-    text = text.replace(/\[\d+:\d+\]/g, '');
-
-    return text;
   };
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
-
     if (sender === 'bot') {
       const wrapper = document.createElement('div');
       wrapper.className = 'bot-message';
