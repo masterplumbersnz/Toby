@@ -2,38 +2,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('chat-form');
   const input = document.getElementById('user-input');
   const messages = document.getElementById('messages');
+  const clearButton = document.getElementById('clear-chat');
   let thread_id = null;
 
-  // Format markdown-style responses (bold, line breaks, numbered lists)
+  // Load saved history
+  const savedHistory = localStorage.getItem('chatHistory');
+  if (savedHistory) {
+    messages.innerHTML = savedHistory;
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // Markdown formatter
   const formatMarkdown = (text) => {
     return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')                            // bold
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<br><strong>$1.</strong> $2')               // numbered list
-      .replace(/brbr/gi, '<br><br>')                                              // model-generated line break fix
-      .replace(/\n{2,}/g, '<br><br>')                                             // paragraph breaks
-      .replace(/\n/g, '<br>');                                                    // single line breaks
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^(\d+)\.\s+(.*)$/gm, '<br><strong>$1.</strong> $2')
+      .replace(/brbr/gi, '<br><br>')
+      .replace(/\n{2,}/g, '<br><br>')
+      .replace(/\n/g, '<br>');
   };
 
-  // Convert OpenAI-style citations and suppress malformed ones
+  // Citation formatter
   const formatCitations = (text) => {
-    // Replace valid citation blocks
     text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
       const safeSource = rawSourceName
-        .replace(/[<>&"'`]/g, '') // remove HTML-sensitive chars
-        .replace(/[*_]/g, '')     // strip markdown
+        .replace(/[<>&"'`]/g, '')
+        .replace(/[*_]/g, '')
         .trim();
-
-      if (safeSource.toLowerCase() === 'source') return ''; // suppress generic [Source: source]
+      if (safeSource.toLowerCase() === 'source') return '';
       return `<span class="citation">[Source: ${safeSource}]</span>`;
     });
 
-    // Remove malformed or partial citation fragments
     text = text.replace(/\[Source: source】?/gi, '');
     text = text.replace(/【\d+:\d+[^】\]]*】/g, '');
     text = text.replace(/【\d+:\d+[^】\]]*\]/g, '');
     text = text.replace(/\[\d+:\d+\]/g, '');
 
     return text;
+  };
+
+  const saveToHistory = () => {
+    localStorage.setItem('chatHistory', messages.innerHTML);
   };
 
   const createBubble = (content, sender) => {
@@ -61,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     messages.scrollTop = messages.scrollHeight;
+    saveToHistory();
     return div;
   };
 
@@ -116,4 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
       createBubble('⚠️ Something went wrong. Please try again later.', 'bot');
     }
   });
+
+  // Clear button logic
+  clearButton.addEventListener('click', () => {
+    if (confirm('Clear the conversation history?')) {
+      localStorage.removeItem('chatHistory');
+      messages.innerHTML = '';
+      thread_id = null;
+    }
+  });
+});
+
 });
