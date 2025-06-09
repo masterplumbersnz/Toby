@@ -138,6 +138,21 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .clear-button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 14px;
+      background-color: #eee;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .clear-button:hover {
+      background-color: #ddd;
+    }
+
   </style>
 </head>
 <body>
@@ -150,6 +165,9 @@
       <input id="user-input" type="text" placeholder="Type your question here..." autocomplete="off" />
       <button type="submit">Send</button>
     </form>
+    
+    <button id="clear-chat" type="button" class="clear-button">Clear Conversation</button>
+
   </section>
 
   <script src="chatbot.js"></script>
