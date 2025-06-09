@@ -61,6 +61,7 @@
       text-align: left;
       line-height: 1.4;
     }
+
     .bot-message {
       display: flex;
       align-items: flex-start;
@@ -80,13 +81,15 @@
       gap: 0.75rem;
     }
 
-    form.chat-form input {
+    form.chat-form textarea {
       flex: 1 1 auto;
       min-width: 0;
       padding: 0.6rem 1rem;
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      resize: none;
+      overflow: hidden;
     }
 
     form.chat-form button {
@@ -138,6 +141,7 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
     .clear-button {
       margin-top: 1rem;
       padding: 0.5rem 1rem;
@@ -162,12 +166,16 @@
     <div id="messages"></div>
 
     <form id="chat-form" class="chat-form">
-      <input id="user-input" type="text" placeholder="Type your question here..." autocomplete="off" />
+      <textarea
+        id="user-input"
+        rows="1"
+        placeholder="Type your question here..."
+        autocomplete="off"
+      ></textarea>
       <button type="submit">Send</button>
     </form>
-    
-    <button id="clear-chat" type="button" class="clear-button">Clear Conversation</button>
 
+    <button id="clear-chat" type="button" class="clear-button">Clear Conversation</button>
   </section>
 
   <script src="chatbot.js"></script>
