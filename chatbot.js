@@ -13,14 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\n/g, '<br>'); // line breaks
   };
 
-  // Convert valid OpenAI citation format to readable source labels
+  // ✅ Updated citation parser: works for both 2-part and 3-part citations
   const formatCitations = (text) => {
-    return text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, sourceName) => {
+    return text.replace(/【\d+:\d+†([^†]+)†?(.*?)?】/g, (_, sourceName) => {
       return `<em>[Source: ${sourceName}]</em>`;
     });
   };
 
-  // FINAL inline citation repair (fixes [Source: name】【#:#] formatting)
+  // Fix malformed [Source: xyz】【x:y] just in case — fallback protection
   const repairInlineCitations = (text) => {
     return text
       .replace(/\[Source:\s*(.*?)】】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】')
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
 
-    // Clean up and format final text
     const repaired = repairInlineCitations(content);
     const formatted = formatMarkdown(formatCitations(repaired));
 
