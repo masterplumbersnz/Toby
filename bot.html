@@ -1,140 +1,175 @@
 <!-- bot.html -->
 <!DOCTYPE html>
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('chat-form');
-  const input = document.getElementById('user-input');
-  const messages = document.getElementById('messages');
-  const clearButton = document.getElementById('clear-chat');
-  let thread_id = null;
-
-  // Load saved history
-  const savedHistory = localStorage.getItem('chatHistory');
-  if (savedHistory) {
-    messages.innerHTML = savedHistory;
-    messages.scrollTop = messages.scrollHeight;
-  }
-
-  // Markdown formatter
-  const formatMarkdown = (text) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^(\d+)\.\s+(.*)$/gm, '<br><strong>$1.</strong> $2')
-      .replace(/brbr/gi, '<br><br>')
-      .replace(/\n{2,}/g, '<br><br>')
-      .replace(/\n/g, '<br>');
-  };
-
-  // Citation formatter
-  const formatCitations = (text) => {
-    text = text.replace(/【\d+:\d+†(.*?)†.*?】/g, (_, rawSourceName) => {
-      const safeSource = rawSourceName
-        .replace(/[<>&"'`]/g, '')
-        .replace(/[*_]/g, '')
-        .trim();
-      if (safeSource.toLowerCase() === 'source') return '';
-      return `<span class="citation">[Source: ${safeSource}]</span>`;
-    });
-
-    text = text.replace(/\[Source: source】?/gi, '');
-    text = text.replace(/【\d+:\d+[^】\]]*】/g, '');
-    text = text.replace(/【\d+:\d+[^】\]]*\]/g, '');
-    text = text.replace(/\[\d+:\d+\]/g, '');
-
-    return text;
-  };
-
-  const saveToHistory = () => {
-    localStorage.setItem('chatHistory', messages.innerHTML);
-  };
-
-  const createBubble = (content, sender) => {
-    const div = document.createElement('div');
-
-    if (sender === 'bot') {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'bot-message';
-
-      const avatar = document.createElement('img');
-      avatar.src = 'https://capable-brioche-99db20.netlify.app/toby-avatar.png';
-      avatar.alt = 'Toby';
-      avatar.className = 'avatar';
-
-      div.className = 'bubble bot';
-      div.innerHTML = formatCitations(formatMarkdown(content));
-
-      wrapper.appendChild(avatar);
-      wrapper.appendChild(div);
-      messages.appendChild(wrapper);
-    } else {
-      div.className = 'bubble user';
-      div.innerHTML = content;
-      messages.appendChild(div);
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask Toby - Your Plumbing Assistant</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: Calibri, sans-serif;
+      font-size: 16px;
+      background-color: #f9f9f9;
+      color: #222;
     }
 
-    messages.scrollTop = messages.scrollHeight;
-    saveToHistory();
-    return div;
-  };
+    h2 {
+      margin-bottom: 1.5rem;
+      font-weight: bold;
+      color: #00395d;
+    }
 
-  const showSpinner = () => {
-    return createBubble('<span class="spinner"></span> Toby is thinking...', 'bot');
-  };
+    #chatbot-section {
+      max-width: 100%;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const message = input.value.trim();
-    if (!message) return;
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
 
-    createBubble(message, 'user');
-    input.value = '';
-    const thinkingBubble = showSpinner();
+    .bubble {
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      max-width: 80%;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
 
-    try {
-      const startRes = await fetch('https://capable-brioche-99db20.netlify.app/.netlify/functions/start-run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, thread_id }),
-      });
+    .user {
+      background-color: #ebf7f8;
+      align-self: flex-end;
+      text-align: right;
+    }
 
-      const { thread_id: newThreadId, run_id } = await startRes.json();
-      thread_id = newThreadId;
+    .bot {
+      background-color: #eeeeee;
+      align-self: flex-start;
+      text-align: left;
+      line-height: 1.4;
+    }
+    .bot-message {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
 
-      let reply = '';
-      let completed = false;
+    .bot-message .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
-      while (!completed) {
-        const checkRes = await fetch('https://capable-brioche-99db20.netlify.app/.netlify/functions/check-run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thread_id, run_id }),
-        });
+    form.chat-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
 
-        if (checkRes.status === 202) {
-          await new Promise(r => setTimeout(r, 1000));
-        } else if (checkRes.ok) {
-          const data = await checkRes.json();
-          reply = data.reply || '(No response)';
-          completed = true;
-        } else {
-          throw new Error('Check-run failed with status: ' + checkRes.status);
-        }
+    form.chat-form input {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0.6rem 1rem;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    form.chat-form button {
+      flex: 0 0 auto;
+      padding: 0.6rem 1.2rem;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      background-color: #5ac5cc;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      form.chat-form {
+        flex-direction: column;
       }
 
-      thinkingBubble.remove();
-      createBubble(reply, 'bot');
-    } catch (err) {
-      console.error('Chat error:', err);
-      thinkingBubble.remove();
-      createBubble('⚠️ Something went wrong. Please try again later.', 'bot');
+      form.chat-form button {
+        width: 100%;
+      }
     }
-  });
 
-  // Clear button logic
-  clearButton.addEventListener('click', () => {
-    if (confirm('Clear the conversation history?')) {
-      localStorage.removeItem('chatHistory');
-      messages.innerHTML = '';
-      thread_id = null;
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #ccc;
+      border-top: 3px solid #444;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
-  });
-});
+
+    .bot p {
+      margin: 0.4em 0;
+    }
+
+    .bot strong {
+      font-weight: bold;
+    }
+
+    .bot em {
+      color: #000000;
+      font-style: italic;
+      font-size: 0.95em;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .clear-button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 14px;
+      background-color: #eee;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .clear-button:hover {
+      background-color: #ddd;
+    }
+
+  </style>
+</head>
+<body>
+  <section id="chatbot-section">
+    <h2>Ask Toby - Your Plumbing Assistant</h2>
+
+    <div id="messages"></div>
+
+    <form id="chat-form" class="chat-form">
+      <input id="user-input" type="text" placeholder="Type your question here..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    
+    <button id="clear-chat" type="button" class="clear-button">Clear Conversation</button>
+
+  </section>
+
+  <script src="chatbot.js"></script>
+</body>
+</html>
