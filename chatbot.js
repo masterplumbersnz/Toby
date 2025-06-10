@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
     input.style.height = input.scrollHeight + 'px';
   });
 
+  // ✅ NEW: Send message on Enter, newline on Shift+Enter
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit(); // triggers the form submit handler below
+    }
+  });
+
   const formatMarkdown = (text) => {
     return text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
