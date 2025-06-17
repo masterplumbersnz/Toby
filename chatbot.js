@@ -46,8 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ✅ NEW: Strip numbered citations like  
   const stripCitations = (text) => {
-    return text.replace(/【\d+:\d+†[^†]+†L\d+-L\d+】/g, '');
-  };
+  return text.replace(/【\d+:\d+†[^†]+†L?\d*-?L?\d*】/g, '');
+};
 
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
