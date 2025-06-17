@@ -44,11 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\[Source:\s*(.*?)】【(\d+):(\d+)]/g, '【$2:$3†$1†lines】');
   };
 
+  // ✅ NEW: Strip numbered citations like  
+  const stripCitations = (text) => {
+    return text.replace(/【\d+:\d+†[^†]+†L\d+-L\d+】/g, '');
+  };
+
   const createBubble = (content, sender) => {
     const div = document.createElement('div');
 
-    const repaired = repairInlineCitations(content);
-    const formatted = formatMarkdown(formatCitations(repaired));
+    const cleaned = stripCitations(content);
+    const repaired = repairInlineCitations(cleaned);
+    const formatted = formatMarkdown(repaired); // No formatCitations anymore
 
     if (sender === 'bot') {
       const wrapper = document.createElement('div');
