@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error('Chat error:', err);
       thinkingBubble.remove();
-      createBubble('⚠️ Something went wrong. Please try again later.', 'bot');
+      createBubble('🤖 My circuits got tangled for a second. Can we try that again?', 'bot');
     }
   });
 });
