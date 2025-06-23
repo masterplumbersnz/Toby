@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wrapper.className = 'bot-message';
 
       const avatar = document.createElement('img');
-      avatar.src = 'https://capable-brioche-99db20.netlify.app/toby-avatar.png';
+      avatar.src = 'https://capable-brioche-99db20.netlify.app/Toby-Avatar.svg';
       avatar.alt = 'Toby';
       avatar.className = 'avatar';
 
