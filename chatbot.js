@@ -114,13 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
             div.className = 'toby-bubble toby-bot';
             div.innerHTML = content;
 
-            const copy = document.createElement('button');
-            copy.className = 'toby-copy-btn';
-            copy.type = 'button'; // prevent any accidental form submission
-            copy.innerText = 'Copy';
-            copy.onclick = () => navigator.clipboard.writeText(div.innerText);
-
-            div.appendChild(copy);
             wrapper.appendChild(avatar);
             wrapper.appendChild(div);
             messages.appendChild(wrapper);
@@ -163,12 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (i >= formatted.length) {
                 clearInterval(interval);
-                const copy = document.createElement('button');
-                copy.className = 'toby-copy-btn';
-                copy.type = 'button';
-                copy.innerText = 'Copy';
-                copy.onclick = () => navigator.clipboard.writeText(bubble.innerText);
-                bubble.appendChild(copy);
             }
         }, 8);
     };
