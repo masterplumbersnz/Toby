@@ -37,7 +37,7 @@ exports.handler = async (event) => {
     const { message, previous_response_id } = JSON.parse(event.body || '{}');
 
     const apiKey        = process.env.OPENAI_API_KEY;
-    const model         = process.env.OPENAI_MODEL         || 'gpt-4.1-mini';
+    const model         = 'gpt-4.1-mini';
     const instructions  = process.env.OPENAI_INSTRUCTIONS;
     const vectorStoreId = process.env.OPENAI_VECTOR_STORE_ID;
 
