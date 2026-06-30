@@ -1,3 +1,13 @@
+// ── Editor safety check ───────────────────────────────────────────────────────
+// The iMIS content editor renders this content item live inside an iframe
+// when you open it to edit. Without this check, Toby takes over the entire
+// edit dialog, blocking access to the source editor underneath.
+// The real live page on masterplumbers.org.nz is never loaded inside an
+// iframe, so this check only stops execution in the editor context.
+if (window.self !== window.top) {
+    console.log('Toby: detected iframe context (likely the iMIS content editor) — skipping initialisation.');
+} else {
+
 document.addEventListener('DOMContentLoaded', () => {
 
     const input      = document.getElementById('user-input');
@@ -108,12 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
             wrapper.className = 'bot-message';
 
             const avatar = document.createElement('img');
-            avatar.src = 'https://capable-brioche-99db20.netlify.app/Toby-Avatar.webp';
+            avatar.src = 'https://capable-brioche-99db20.netlify.app/Toby-Avatar.svg';
             avatar.className = 'toby-avatar';
 
             div.className = 'toby-bubble toby-bot';
             div.innerHTML = content;
 
+            const copy = document.createElement('button');
+            copy.className = 'toby-copy-btn';
+            copy.type = 'button'; // prevent any accidental form submission
+            copy.innerText = 'Copy';
+            copy.onclick = () => navigator.clipboard.writeText(div.innerText);
+
+            div.appendChild(copy);
             wrapper.appendChild(avatar);
             wrapper.appendChild(div);
             messages.appendChild(wrapper);
@@ -156,6 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (i >= formatted.length) {
                 clearInterval(interval);
+                const copy = document.createElement('button');
+                copy.className = 'toby-copy-btn';
+                copy.type = 'button';
+                copy.innerText = 'Copy';
+                copy.onclick = () => navigator.clipboard.writeText(bubble.innerText);
+                bubble.appendChild(copy);
             }
         }, 8);
     };
@@ -281,4 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-});
+}); // end DOMContentLoaded
+
+} // end iframe guard
